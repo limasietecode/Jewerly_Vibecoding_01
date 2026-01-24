@@ -21,6 +21,7 @@ const params = {
     autoRebuild: true,
     turntable: 0,
     displayWireframe: false,
+    matColor: '#5a463c', // Default neutral brownish
     // Actions
     RandomizeSeed: function () {
         params.SEED = Math.floor(Math.random() * 100000);
@@ -47,7 +48,8 @@ let V = []; // Vertices (p5.Vector)
 let F = []; // Faces (int[3])
 
 function setup() {
-    createCanvas(windowWidth, windowHeight, WEBGL);
+    let c = createCanvas(windowWidth, windowHeight, WEBGL);
+    c.parent('canvas-container'); // Fix: Parent to container to avoid off-screen rendering
     smooth(); // p5.js equivalent, though antialiasing is usually on by default
 
     // Noise settings
@@ -88,7 +90,7 @@ function draw() {
     rotateX(radians(-24)); // Keep the tilt from original sketch
 
     noStroke();
-    fill(90, 70, 60); // Neutral brownish "ink"
+    fill(params.matColor); // Use user selected color
     if (params.displayWireframe) {
         stroke(0);
         noFill();
@@ -257,6 +259,7 @@ function buildUI() {
     const gExport = gui.addFolder('Export / Misc');
     gExport.add(params, 'SEED').listen().onChange(() => { noiseSeed(params.SEED); randomSeed(params.SEED); triggerRebuild(); });
     gExport.add(params, 'RandomizeSeed');
+    gExport.addColor(params, 'matColor').name('Material Color');
     gExport.add(params, 'TARGET_DIAM_MM', 10, 100);
     gExport.add(params, 'autoRebuild');
     gExport.add(params, 'autoRotate');
