@@ -52,6 +52,12 @@ const params = {
     Screenshot: function () {
         saveCanvas('jewelry_design', 'png');
     },
+    SavePreset: function () {
+        doSavePreset();
+    },
+    LoadPreset: function () {
+        doLoadPreset();
+    },
 
     // Camera Views
     ViewFront: function () { setCameraView(0, 0, 800); params.autoRotate = false; },
@@ -228,6 +234,8 @@ function buildUI() {
     gData.add(params, 'SEED').listen().onChange(() => { noiseSeed(params.SEED); randomSeed(params.SEED); triggerRebuild(); });
     gData.add(params, 'RandomizeSeed');
     gData.add(params, 'TARGET_DIAM_MM', 10, 100);
+    gData.add(params, 'SavePreset');
+    gData.add(params, 'LoadPreset');
     gData.add(params, 'Rebuild');
     gData.add(params, 'Export_OBJ');
     gData.add(params, 'Export_STL');
@@ -240,6 +248,49 @@ function applyPreset(name) {
     // Force update UI
     gui.controllersRecursive().forEach(c => c.updateDisplay());
     triggerRebuild();
+}
+
+function doSavePreset() {
+    // Filter out functions and keep only properties
+    let data = {};
+    for (let key in params) {
+        if (typeof params[key] !== 'function') {
+            data[key] = params[key];
+        }
+    }
+    saveJSON(data, 'jewelry_preset.json');
+}
+
+function doLoadPreset() {
+    // Create a hidden file input
+    let input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = (e) => {
+        let file = e.target.files[0];
+        if (!file) return;
+
+        let reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                let data = JSON.parse(event.target.result);
+                Object.assign(params, data);
+                gui.controllersRecursive().forEach(c => c.updateDisplay());
+                triggerRebuild();
+                console.log("Preset loaded successfully");
+            } catch (err) {
+                console.error("Error loading preset:", err);
+                alert("Invalid JSON file");
+            }
+            document.body.removeChild(input);
+        };
+        reader.readAsText(file);
+    };
+
+    input.click();
 }
 
 // ------------------ Mesh Construction ------------------
