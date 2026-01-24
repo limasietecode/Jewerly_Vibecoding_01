@@ -1,9 +1,11 @@
 // Vibration Jewelry Editor - Ported to p5.js
 // Original by Lima Labs / Vibecoding
 // Ported for web deployment
+// Updates: MatCaps, Presets, Camera Control, STL Export
 
 // ------------------ Parameters ------------------
 const params = {
+    // Shape properies
     LAYERS: 9,
     MIN_R: 18,
     MAX_R: 170,
@@ -12,45 +14,85 @@ const params = {
     LOBES: 6,
     LOBE_AMP: 12,
     STEP_A: 0.028,
+
+    // Extrusion properties
     RIBBON_W_MIN: 8,
     RIBBON_W_MAX: 5,
     EXTRUDE_Z: 10,
+
+    // Misc
     SEED: 1337,
     TARGET_DIAM_MM: 45,
     autoRotate: true,
     autoRebuild: true,
     turntable: 0,
     displayWireframe: false,
-    matColor: '#5a463c', // Default neutral brownish
+
+    // Visuals
+    materialType: 'Gold', // Gold, Silver, Copper, Flat
+    bgColor: '#ffffff',
+
     // Actions
     RandomizeSeed: function () {
         params.SEED = Math.floor(Math.random() * 100000);
         noiseSeed(params.SEED);
         randomSeed(params.SEED);
-        // GUI update handled in loop or manually if needed, but lil-gui updates bound vars automatically usually unless listen() is used
-        // We will use listen() on the controller
+        gui.controllers.forEach(c => c.updateDisplay());
         triggerRebuild();
     },
     Rebuild: function () {
         triggerRebuild();
     },
     Export_OBJ: function () {
-        doExport();
+        doExportOBJ();
+    },
+    Export_STL: function () {
+        doExportSTL();
+    },
+    Screenshot: function () {
+        saveCanvas('jewelry_design', 'png');
+    },
+
+    // Camera Views
+    ViewFront: function () { setCameraView(0, 0, 800); params.autoRotate = false; },
+    ViewTop: function () { setCameraView(0, -800, 0.1); params.autoRotate = false; }, // Y-up is negative in p5 webgl sometimes or just different
+    ViewSide: function () { setCameraView(800, 0, 0); params.autoRotate = false; },
+    ViewIso: function () { setCameraView(600, -600, 600); params.autoRotate = false; }
+};
+
+const presets = {
+    'Minimalist': {
+        LAYERS: 1, MIN_R: 60, MAX_R: 60, NOISE_FREQ: 0.1, WOBBLE_PX: 2, LOBES: 0, LOBE_AMP: 0, RIBBON_W_MIN: 12, RIBBON_W_MAX: 12
+    },
+    'Organic': {
+        LAYERS: 12, MIN_R: 10, MAX_R: 180, NOISE_FREQ: 1.2, WOBBLE_PX: 25, LOBES: 5, LOBE_AMP: 15, RIBBON_W_MIN: 4, RIBBON_W_MAX: 2
+    },
+    'Futuristic': {
+        LAYERS: 6, MIN_R: 40, MAX_R: 160, NOISE_FREQ: 0, WOBBLE_PX: 0, LOBES: 3, LOBE_AMP: 40, RIBBON_W_MIN: 2, RIBBON_W_MAX: 2, EXTRUDE_Z: 20
     }
 };
 
 let gui;
 let built = false;
 let needsRebuild = true;
+let matcapShader;
+let matcaps = {};
 
 // Mesh buffers
 let V = []; // Vertices (p5.Vector)
 let F = []; // Faces (int[3])
 
+function preload() {
+    matcapShader = loadShader('shader.vert', 'shader.frag');
+    matcaps['Gold'] = loadImage('assets/matcaps/Gold.png');
+    matcaps['Silver'] = loadImage('assets/matcaps/Silver.png');
+    matcaps['Copper'] = loadImage('assets/matcaps/Copper.png');
+}
+
 function setup() {
     let c = createCanvas(windowWidth, windowHeight, WEBGL);
-    c.parent('canvas-container'); // Fix: Parent to container to avoid off-screen rendering
-    smooth(); // p5.js equivalent, though antialiasing is usually on by default
+    c.parent('canvas-container');
+    smooth();
 
     // Noise settings
     noiseSeed(params.SEED);
@@ -61,74 +103,149 @@ function setup() {
 }
 
 function draw() {
-    background(255);
+    background(params.bgColor);
 
-    // Lighting
-    ambientLight(100);
-    directionalLight(255, 255, 255, 0.5, 0.5, -1);
-    pointLight(200, 200, 200, 0, 0, 500);
+    // Lighting (only used if shader is not active or for wireframe)
+    ambientLight(150);
+    directionalLight(255, 255, 255, 0.5, 0.8, -1);
 
-    // Rebuild if needed
     if (!built || needsRebuild) {
         buildMesh();
         built = true;
         needsRebuild = false;
     }
 
-    // Interaction
-    orbitControl(); // p5.js built-in camera control, handles mouse drag
+    // Camera Orbit
+    orbitControl();
 
-    // scene interaction overrides
+    // Auto Rotation
     if (params.autoRotate) {
-        params.turntable += 0.003;
+        params.turntable += 0.005;
     }
 
     push();
-    // rotateX(radians(-24)); // orbitControl handles view, but we can add initial tilt or just let user control
-    // We'll apply the turntable rotation to the object itself
+    // Apply rotation
     rotateY(params.turntable);
-    rotateX(radians(-24)); // Keep the tilt from original sketch
+    // Initial tilt for cosmetic view
+    rotateX(radians(-24));
 
-    noStroke();
-    fill(params.matColor); // Use user selected color
-    if (params.displayWireframe) {
-        stroke(0);
-        noFill();
+    // Material Handling
+    if (params.materialType !== 'Flat' && matcaps[params.materialType]) {
+        shader(matcapShader);
+        matcapShader.setUniform('uMatcapTexture', matcaps[params.materialType]);
+
+        // We don't use stroke in shader mode typically, usually wireframe is separate
+        noStroke();
+    } else {
+        resetShader();
+        fill(200); // Default grey if flat
+        if (params.materialType === 'Flat') {
+            stroke(0);
+            strokeWeight(0.5);
+        } else {
+            noStroke();
+        }
     }
 
+    // Draw Mesh
     beginShape(TRIANGLES);
     for (let tri of F) {
         let a = V[tri[0]];
         let b = V[tri[1]];
         let c = V[tri[2]];
 
-        // Calculate normal
+        // Check validity
+        if (!a || !b || !c) continue;
+
         let n = faceNormal(a, b, c);
         normal(n.x, n.y, n.z);
 
-        vertex(a.x, a.y, a.z);
-        vertex(b.x, b.y, b.z);
-        vertex(c.x, c.y, c.z);
+        // Texture coordinates (UV) not strictly needed for MatCap in this simple implementation
+        // as we use view-space normals, but good practice
+        vertex(a.x, a.y, a.z, 0, 0);
+        vertex(b.x, b.y, b.z, 1, 0);
+        vertex(c.x, c.y, c.z, 0, 1);
     }
     endShape();
     pop();
-
-    // Overlay info (2D)
-    // In WEBGL mode, drawing 2D text is a bit different or needs a separate pass/layer
-    // limiting text for now or using minimal overlay logic if critical. 
-    // lil-gui handles most info.
 }
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 
-// ------------------ Build the mesh ------------------
+// ------------------ Camera Helper ------------------
+function setCameraView(x, y, z) {
+    // Reset turntable
+    params.turntable = 0;
+    camera(x, y, z, 0, 0, 0, 0, 1, 0);
+}
+
+// ------------------ Build UI ------------------
+function buildUI() {
+    gui = new lil.GUI({ title: 'Jewelry Editor' });
+
+    // Presets
+    const gPresets = gui.addFolder('Presets');
+    for (let name in presets) {
+        let pObj = { [name]: function () { applyPreset(name); } };
+        gPresets.add(pObj, name);
+    }
+
+    // Shape
+    const gShape = gui.addFolder('Shape');
+    gShape.add(params, 'LAYERS', 1, 30, 1).onChange(triggerRebuild).listen();
+    gShape.add(params, 'MIN_R', 4, 150).onChange(triggerRebuild).listen();
+    gShape.add(params, 'MAX_R', 10, 300).onChange(triggerRebuild).listen();
+    gShape.add(params, 'NOISE_FREQ', 0.0, 3.0).onChange(triggerRebuild).listen();
+    gShape.add(params, 'WOBBLE_PX', 0.0, 80.0).onChange(triggerRebuild).listen();
+    gShape.add(params, 'LOBES', 0, 24, 1).onChange(triggerRebuild).listen();
+    gShape.add(params, 'LOBE_AMP', 0.0, 80.0).onChange(triggerRebuild).listen();
+    gShape.add(params, 'STEP_A', 0.005, 0.08).onChange(triggerRebuild).listen();
+
+    // Extrusion
+    const gExtrude = gui.addFolder('Extrusion');
+    gExtrude.add(params, 'RIBBON_W_MIN', 0.5, 15).onChange(triggerRebuild).listen();
+    gExtrude.add(params, 'RIBBON_W_MAX', 0.5, 15).onChange(triggerRebuild).listen();
+    gExtrude.add(params, 'EXTRUDE_Z', 0.5, 25).onChange(triggerRebuild).listen();
+
+    // Visuals
+    const gVisuals = gui.addFolder('Appearance');
+    gVisuals.add(params, 'materialType', ['Gold', 'Silver', 'Copper', 'Flat']).name('Material');
+    gVisuals.addColor(params, 'bgColor').name('Background');
+    gVisuals.add(params, 'autoRotate').listen();
+
+    // View
+    const gView = gui.addFolder('Camera / Export');
+    gView.add(params, 'ViewFront').name('Front View');
+    gView.add(params, 'ViewTop').name('Top View');
+    gView.add(params, 'ViewSide').name('Side View');
+    gView.add(params, 'ViewIso').name('Isometric');
+    gView.add(params, 'Screenshot');
+
+    // Data
+    const gData = gui.addFolder('Data / Export');
+    gData.add(params, 'SEED').listen().onChange(() => { noiseSeed(params.SEED); randomSeed(params.SEED); triggerRebuild(); });
+    gData.add(params, 'RandomizeSeed');
+    gData.add(params, 'TARGET_DIAM_MM', 10, 100);
+    gData.add(params, 'Rebuild');
+    gData.add(params, 'Export_OBJ');
+    gData.add(params, 'Export_STL');
+}
+
+function applyPreset(name) {
+    let p = presets[name];
+    if (!p) return;
+    Object.assign(params, p);
+    // Force update UI
+    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    triggerRebuild();
+}
+
+// ------------------ Mesh Construction ------------------
 function buildMesh() {
     V = [];
     F = [];
-
-    // Reset seeds to ensure deterministic rebuild with same parameters
     noiseSeed(params.SEED);
     randomSeed(params.SEED);
 
@@ -147,7 +264,6 @@ function buildMesh() {
 
 function makeContour(R, amp, nfreq, lobes, lobeAmp, seedVal) {
     let pts = [];
-    // TWO_PI is approx 6.28. 
     for (let a = 0; a <= TWO_PI + 0.0001; a += params.STEP_A) {
         let n = noise(cos(a) * nfreq + seedVal, sin(a) * nfreq + seedVal * 0.7);
         let ripple = (n - 0.5) * 2.0 * amp;
@@ -161,11 +277,9 @@ function makeContour(R, amp, nfreq, lobes, lobeAmp, seedVal) {
 function addRibbonExtrusion(poly, width, depth) {
     let n = poly.length;
     if (n < 3) return;
-
     let hw = width * 0.5;
     let hz = depth * 0.5;
 
-    // Indices mapping
     let idxOutTop = new Int32Array(n);
     let idxInTop = new Int32Array(n);
     let idxOutBot = new Int32Array(n);
@@ -173,17 +287,11 @@ function addRibbonExtrusion(poly, width, depth) {
 
     for (let i = 0; i < n; i++) {
         let p = poly[i];
-        // Handling wrap-around for tangent calculation
         let p0 = poly[(i - 1 + n) % n];
         let p1 = poly[(i + 1) % n];
-
-        // Tangent
         let tangent = p5.Vector.sub(p1, p0);
         tangent.normalize();
-
-        // Normal 2D (-y, x)
         let normal2D = createVector(-tangent.y, tangent.x);
-
         let pout = p5.Vector.add(p, p5.Vector.mult(normal2D, hw));
         let pin = p5.Vector.add(p, p5.Vector.mult(normal2D, -hw));
 
@@ -193,23 +301,14 @@ function addRibbonExtrusion(poly, width, depth) {
         idxInBot[i] = addVertex(createVector(pin.x, pin.y, -hz));
     }
 
-    // Faces generation
     for (let i = 0; i < n; i++) {
         let i2 = (i + 1) % n;
-
-        // Top lids
         addTri(idxOutTop[i], idxInTop[i], idxInTop[i2]);
         addTri(idxOutTop[i], idxInTop[i2], idxOutTop[i2]);
-
-        // Bottom lids (flipped winding)
         addTri(idxOutBot[i], idxInBot[i2], idxInBot[i]);
         addTri(idxOutBot[i], idxOutBot[i2], idxInBot[i2]);
-
-        // Outer wall
         addTri(idxOutTop[i], idxOutBot[i], idxOutBot[i2]);
         addTri(idxOutTop[i], idxOutBot[i2], idxOutTop[i2]);
-
-        // Inner wall
         addTri(idxInTop[i], idxInBot[i2], idxInBot[i]);
         addTri(idxInTop[i], idxInTop[i2], idxInBot[i2]);
     }
@@ -237,76 +336,7 @@ function triggerRebuild() {
     needsRebuild = true;
 }
 
-// ------------------ UI ------------------
-function buildUI() {
-    gui = new lil.GUI({ title: 'Jewelry Editor' });
-
-    const gShape = gui.addFolder('Shape');
-    gShape.add(params, 'LAYERS', 1, 30, 1).onChange(triggerRebuild);
-    gShape.add(params, 'MIN_R', 4, 150).onChange(triggerRebuild);
-    gShape.add(params, 'MAX_R', 10, 300).onChange(triggerRebuild);
-    gShape.add(params, 'NOISE_FREQ', 0.0, 3.0).onChange(triggerRebuild);
-    gShape.add(params, 'WOBBLE_PX', 0.0, 80.0).onChange(triggerRebuild);
-    gShape.add(params, 'LOBES', 0, 24, 1).onChange(triggerRebuild);
-    gShape.add(params, 'LOBE_AMP', 0.0, 80.0).onChange(triggerRebuild);
-    gShape.add(params, 'STEP_A', 0.005, 0.08).onChange(triggerRebuild);
-
-    const gExtrude = gui.addFolder('Extrusion');
-    gExtrude.add(params, 'RIBBON_W_MIN', 0.5, 15).onChange(triggerRebuild);
-    gExtrude.add(params, 'RIBBON_W_MAX', 0.5, 15).onChange(triggerRebuild);
-    gExtrude.add(params, 'EXTRUDE_Z', 0.5, 25).onChange(triggerRebuild);
-
-    const gExport = gui.addFolder('Export / Misc');
-    gExport.add(params, 'SEED').listen().onChange(() => { noiseSeed(params.SEED); randomSeed(params.SEED); triggerRebuild(); });
-    gExport.add(params, 'RandomizeSeed');
-    gExport.addColor(params, 'matColor').name('Material Color');
-    gExport.add(params, 'TARGET_DIAM_MM', 10, 100);
-    gExport.add(params, 'autoRebuild');
-    gExport.add(params, 'autoRotate');
-    // gExport.add(params, 'displayWireframe');
-    gExport.add(params, 'Rebuild');
-    gExport.add(params, 'Export_OBJ');
-}
-
 // ------------------ Export ------------------
-function doExport() {
-    let date = new Date();
-    let stamp = date.getFullYear() +
-        nf(date.getMonth() + 1, 2) +
-        nf(date.getDate(), 2) + "_" +
-        nf(date.getHours(), 2) +
-        nf(date.getMinutes(), 2) +
-        nf(date.getSeconds(), 2);
-
-    let base = "arete_" + stamp;
-
-    let dpx = currentOuterDiameterPx();
-    let scale = 1.0;
-    if (dpx > 0) {
-        scale = params.TARGET_DIAM_MM / dpx;
-    }
-
-    let fname = base + "_D" + Math.round(params.TARGET_DIAM_MM) + "mm.obj";
-
-    let output = [];
-    output.push("# OBJ exported from Web Jewelry Editor");
-    output.push("# Units: mm (scaled on export)");
-
-    // Vertices
-    for (let v of V) {
-        output.push(`v ${(v.x * scale).toFixed(6)} ${(v.y * scale).toFixed(6)} ${(v.z * scale).toFixed(6)}`);
-    }
-
-    // Faces
-    for (let tri of F) {
-        // OBJ indices are 1-based
-        output.push(`f ${tri[0] + 1} ${tri[1] + 1} ${tri[2] + 1}`);
-    }
-
-    saveStrings(output, fname);
-    console.log("Exported: " + fname + " Scale: " + scale);
-}
-
 function currentOuterDiameterPx() {
     if (V.length === 0) return 0;
     let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
@@ -316,7 +346,57 @@ function currentOuterDiameterPx() {
         if (p.y < miny) miny = p.y;
         if (p.y > maxy) maxy = p.y;
     }
-    let w = maxx - minx;
-    let h = maxy - miny;
-    return Math.max(w, h);
+    return Math.max(maxx - minx, maxy - miny);
+}
+
+function getExportScale() {
+    let dpx = currentOuterDiameterPx();
+    return (dpx > 0) ? (params.TARGET_DIAM_MM / dpx) : 1.0;
+}
+
+function doExportOBJ() {
+    let scale = getExportScale();
+    let fname = "jewelry_" + Date.now() + ".obj";
+    let output = [];
+    output.push("# Vibecoding Jewelry");
+    for (let v of V) output.push(`v ${(v.x * scale).toFixed(6)} ${(v.y * scale).toFixed(6)} ${(v.z * scale).toFixed(6)}`);
+    for (let tri of F) output.push(`f ${tri[0] + 1} ${tri[1] + 1} ${tri[2] + 1}`);
+    let blob = new Blob([output.join('\n')], { type: 'text/plain' });
+    downloadBlob(blob, fname);
+}
+
+function doExportSTL() {
+    let scale = getExportScale();
+    let fname = "jewelry_" + Date.now() + ".stl";
+    let out = "solid jewelry\n";
+
+    for (let tri of F) {
+        let v1 = V[tri[0]];
+        let v2 = V[tri[1]];
+        let v3 = V[tri[2]];
+
+        // Normal calculation
+        let u = p5.Vector.sub(v2, v1);
+        let v = p5.Vector.sub(v3, v1);
+        let n = u.cross(v).normalize();
+
+        out += `facet normal ${n.x.toFixed(6)} ${n.y.toFixed(6)} ${n.z.toFixed(6)}\n`;
+        out += "outer loop\n";
+        out += `vertex ${(v1.x * scale).toFixed(6)} ${(v1.y * scale).toFixed(6)} ${(v1.z * scale).toFixed(6)}\n`;
+        out += `vertex ${(v2.x * scale).toFixed(6)} ${(v2.y * scale).toFixed(6)} ${(v2.z * scale).toFixed(6)}\n`;
+        out += `vertex ${(v3.x * scale).toFixed(6)} ${(v3.y * scale).toFixed(6)} ${(v3.z * scale).toFixed(6)}\n`;
+        out += "endloop\n";
+        out += "endfacet\n";
+    }
+    out += "endsolid jewelry\n";
+    let blob = new Blob([out], { type: 'text/plain' });
+    downloadBlob(blob, fname);
+}
+
+function downloadBlob(blob, filename) {
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
 }
