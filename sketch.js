@@ -15,6 +15,13 @@ const params = {
     LOBE_AMP: 12,
     STEP_A: 0.028,
 
+    // Attractor
+    ATTRACTOR_ON: false,
+    ATTRACTOR_X: 100,
+    ATTRACTOR_Y: 0,
+    ATTRACTOR_RADIUS: 100,
+    ATTRACTOR_STRENGTH: 50,
+
     // Extrusion properties
     RIBBON_W_MIN: 8,
     RIBBON_W_MAX: 5,
@@ -139,8 +146,6 @@ function draw() {
     if (params.materialType !== 'Flat' && matcaps[params.materialType]) {
         shader(matcapShader);
         matcapShader.setUniform('uMatcapTexture', matcaps[params.materialType]);
-
-        // We don't use stroke in shader mode typically, usually wireframe is separate
         noStroke();
     } else {
         resetShader();
@@ -166,13 +171,26 @@ function draw() {
         let n = faceNormal(a, b, c);
         normal(n.x, n.y, n.z);
 
-        // Texture coordinates (UV) not strictly needed for MatCap in this simple implementation
-        // as we use view-space normals, but good practice
         vertex(a.x, a.y, a.z, 0, 0);
         vertex(b.x, b.y, b.z, 1, 0);
         vertex(c.x, c.y, c.z, 0, 1);
     }
     endShape();
+
+    // Draw Attractor Visualization (if on)
+    if (params.ATTRACTOR_ON) {
+        resetShader();
+        push();
+        translate(params.ATTRACTOR_X, params.ATTRACTOR_Y, 0);
+        noStroke();
+        fill(255, 0, 0, 150);
+        sphere(5); // Center point
+        noFill();
+        stroke(255, 0, 0, 50);
+        circle(0, 0, params.ATTRACTOR_RADIUS * 2); // Influence range
+        pop();
+    }
+
     pop();
 }
 
@@ -208,6 +226,14 @@ function buildUI() {
     gShape.add(params, 'LOBES', 0, 24, 1).onChange(triggerRebuild).listen();
     gShape.add(params, 'LOBE_AMP', 0.0, 80.0).onChange(triggerRebuild).listen();
     gShape.add(params, 'STEP_A', 0.005, 0.08).onChange(triggerRebuild).listen();
+
+    // Attractor
+    const gAttractor = gui.addFolder('Attractor');
+    gAttractor.add(params, 'ATTRACTOR_ON').name('Enable Attractor').onChange(triggerRebuild);
+    gAttractor.add(params, 'ATTRACTOR_X', -300, 300).name('Pos X').onChange(triggerRebuild);
+    gAttractor.add(params, 'ATTRACTOR_Y', -300, 300).name('Pos Y').onChange(triggerRebuild);
+    gAttractor.add(params, 'ATTRACTOR_RADIUS', 10, 300).name('Range').onChange(triggerRebuild);
+    gAttractor.add(params, 'ATTRACTOR_STRENGTH', -100, 100).name('Strength').onChange(triggerRebuild);
 
     // Extrusion
     const gExtrude = gui.addFolder('Extrusion');
@@ -315,12 +341,41 @@ function buildMesh() {
 
 function makeContour(R, amp, nfreq, lobes, lobeAmp, seedVal) {
     let pts = [];
+    // Attractor Prep
+    let attPos = createVector(params.ATTRACTOR_X, params.ATTRACTOR_Y);
+
     for (let a = 0; a <= TWO_PI + 0.0001; a += params.STEP_A) {
         let n = noise(cos(a) * nfreq + seedVal, sin(a) * nfreq + seedVal * 0.7);
         let ripple = (n - 0.5) * 2.0 * amp;
         let petals = sin(a * lobes + seedVal * 1.3) * lobeAmp;
         let r = Math.max(5, R + ripple + petals);
-        pts.push(createVector(r * cos(a), r * sin(a), 0));
+
+        // Convert to position
+        let x = r * cos(a);
+        let y = r * sin(a);
+
+        // Attractor Influence
+        if (params.ATTRACTOR_ON) {
+            let d = dist(x, y, attPos.x, attPos.y);
+            if (d < params.ATTRACTOR_RADIUS) {
+                // Linear falloff 0 at radius, 1 at center
+                let influence = map(d, 0, params.ATTRACTOR_RADIUS, 1, 0);
+
+                // Modify the current radius 'r' based on attractor strength
+                // Positive strength pushes away (expands radius?), negative pulls in?
+                // Let's interpret strength as direct addition to density/radius
+
+                let change = params.ATTRACTOR_STRENGTH * influence;
+                r += change;
+                r = Math.max(0.1, r); // Prevent negative radius
+
+                // Recalculate XY because R changed
+                x = r * cos(a);
+                y = r * sin(a);
+            }
+        }
+
+        pts.push(createVector(x, y, 0));
     }
     return pts;
 }
