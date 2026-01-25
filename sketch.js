@@ -132,7 +132,16 @@ function draw() {
     }
 
     // Camera Orbit
-    orbitControl();
+    // Fix: Only orbit if not interacting with the sidebar
+    let sidebar = document.getElementById('sidebar');
+    let isOverSidebar = sidebar && sidebar.matches(':hover');
+    // Also check if we are currently dragging on a UI element (active element inputs)
+    let activeEl = document.activeElement;
+    let isInputActive = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'BUTTON');
+
+    if (!isOverSidebar && !isInputActive) {
+        orbitControl();
+    }
 
     // Auto Rotation
     if (params.autoRotate) {
