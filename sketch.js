@@ -44,7 +44,7 @@ const params = {
         params.SEED = Math.floor(Math.random() * 100000);
         noiseSeed(params.SEED);
         randomSeed(params.SEED);
-        gui.controllers.forEach(c => c.updateDisplay());
+        updateUISync();
         triggerRebuild();
     },
     Rebuild: function () {
@@ -209,84 +209,150 @@ function setCameraView(x, y, z) {
 }
 
 // ------------------ Build UI ------------------
+// ------------------ Build UI (Tailwind Integration) ------------------
 function buildUI() {
-    gui = new lil.GUI({ title: 'Jewelry Editor' });
+    // We no longer use lil-gui. We bind HTML elements to params.
 
-    // Presets
-    const gPresets = gui.addFolder('Presets');
-    for (let name in presets) {
-        let pObj = { [name]: function () { applyPreset(name); } };
-        gPresets.add(pObj, name);
+    // --- Helper to bind slider ---
+    const bindSlider = (id, paramKey, onChange = triggerRebuild) => {
+        const el = document.getElementById(id);
+        const valDisplay = document.getElementById('val-' + paramKey);
+        if (!el) return;
+
+        // Init value
+        el.value = params[paramKey];
+
+        el.oninput = (e) => {
+            let val = parseFloat(e.target.value);
+            params[paramKey] = val;
+            if (valDisplay) valDisplay.innerText = val;
+            onChange();
+        };
+    };
+
+    // --- Helper to bind button ---
+    const bindBtn = (id, callback) => {
+        const el = document.getElementById(id);
+        if (el) el.onclick = callback;
+    };
+
+    // --- Shape ---
+    bindSlider('inp-LAYERS', 'LAYERS');
+    bindSlider('inp-MIN_R', 'MIN_R');
+    bindSlider('inp-MAX_R', 'MAX_R');
+    bindSlider('inp-NOISE_FREQ', 'NOISE_FREQ');
+    bindSlider('inp-WOBBLE_PX', 'WOBBLE_PX');
+
+    // --- Extrusion ---
+    bindSlider('inp-LOBES', 'LOBES');
+    bindSlider('inp-LOBE_AMP', 'LOBE_AMP');
+    bindSlider('inp-EXTRUDE_Z', 'EXTRUDE_Z');
+
+    // --- Attractor ---
+    const attToggle = document.getElementById('inp-ATTRACTOR_ON');
+    const attControls = document.getElementById('attractor-controls');
+    if (attToggle) {
+        attToggle.onchange = (e) => {
+            params.ATTRACTOR_ON = e.target.checked;
+            attControls.classList.toggle('opacity-50', !params.ATTRACTOR_ON);
+            attControls.classList.toggle('pointer-events-none', !params.ATTRACTOR_ON);
+            triggerRebuild();
+        };
+    }
+    bindSlider('inp-ATTRACTOR_X', 'ATTRACTOR_X');
+    bindSlider('inp-ATTRACTOR_Y', 'ATTRACTOR_Y');
+    bindSlider('inp-ATTRACTOR_RADIUS', 'ATTRACTOR_RADIUS');
+    bindSlider('inp-ATTRACTOR_STRENGTH', 'ATTRACTOR_STRENGTH');
+
+    // --- Appearance ---
+    // Material Buttons
+    document.querySelectorAll('.material-btn').forEach(btn => {
+        btn.onclick = () => {
+            params.materialType = btn.dataset.mat;
+            // Reset all borders
+            document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('border-brand', 'text-brand'));
+            if (btn.dataset.mat !== 'Flat') btn.classList.add('border-brand');
+            triggerRebuild();
+        };
+    });
+
+    // BG Color
+    const bgInput = document.getElementById('bg-color');
+    if (bgInput) {
+        bgInput.oninput = (e) => params.bgColor = e.target.value;
     }
 
-    // Shape
-    const gShape = gui.addFolder('Shape');
-    gShape.add(params, 'LAYERS', 1, 30, 1).onChange(triggerRebuild).listen();
-    gShape.add(params, 'MIN_R', 4, 150).onChange(triggerRebuild).listen();
-    gShape.add(params, 'MAX_R', 10, 300).onChange(triggerRebuild).listen();
-    gShape.add(params, 'NOISE_FREQ', 0.0, 3.0).onChange(triggerRebuild).listen();
-    gShape.add(params, 'WOBBLE_PX', 0.0, 80.0).onChange(triggerRebuild).listen();
-    gShape.add(params, 'LOBES', 0, 24, 1).onChange(triggerRebuild).listen();
-    gShape.add(params, 'LOBE_AMP', 0.0, 80.0).onChange(triggerRebuild).listen();
-    gShape.add(params, 'STEP_A', 0.005, 0.08).onChange(triggerRebuild).listen();
-
-    // Attractor
-    const gAttractor = gui.addFolder('Attractor');
-    gAttractor.add(params, 'ATTRACTOR_ON').name('Enable Attractor').onChange(triggerRebuild);
-    gAttractor.add(params, 'ATTRACTOR_X', -300, 300).name('Pos X').onChange(triggerRebuild);
-    gAttractor.add(params, 'ATTRACTOR_Y', -300, 300).name('Pos Y').onChange(triggerRebuild);
-    gAttractor.add(params, 'ATTRACTOR_RADIUS', 10, 300).name('Range').onChange(triggerRebuild);
-    gAttractor.add(params, 'ATTRACTOR_STRENGTH', -100, 100).name('Strength').onChange(triggerRebuild);
-
-    // Extrusion
-    const gExtrude = gui.addFolder('Extrusion');
-    gExtrude.add(params, 'RIBBON_W_MIN', 0.5, 15).onChange(triggerRebuild).listen();
-    gExtrude.add(params, 'RIBBON_W_MAX', 0.5, 15).onChange(triggerRebuild).listen();
-    gExtrude.add(params, 'EXTRUDE_Z', 0.5, 25).onChange(triggerRebuild).listen();
-
-    // Visuals
-    const gVisuals = gui.addFolder('Appearance');
-    gVisuals.add(params, 'materialType', ['Gold', 'Silver', 'Copper', 'Flat']).name('Material');
-    gVisuals.addColor(params, 'bgColor').name('Background');
-    gVisuals.add(params, 'autoRotate').listen();
-
-    // View
-    const gView = gui.addFolder('Camera / Export');
-    gView.add(params, 'ViewFront').name('Front View');
-    gView.add(params, 'ViewTop').name('Top View');
-    gView.add(params, 'ViewSide').name('Side View');
-    gView.add(params, 'ViewIso').name('Isometric');
-    gView.add(params, 'Screenshot');
-
-    // Data
-    const gData = gui.addFolder('Data / Export');
-    gData.add(params, 'SEED').listen().onChange(() => { noiseSeed(params.SEED); randomSeed(params.SEED); triggerRebuild(); });
-    gData.add(params, 'RandomizeSeed');
-    gData.add(params, 'TARGET_DIAM_MM', 10, 100);
-    gData.add(params, 'SavePreset');
-    gData.add(params, 'LoadPreset');
-    gData.add(params, 'Rebuild');
-    gData.add(params, 'Export_OBJ');
-    gData.add(params, 'Export_STL');
-
-    // Mobile optimization: Close folders if screen is narrow
-    if (window.innerWidth < 600) {
-        gPresets.close();
-        gShape.close();
-        gExtrude.close();
-        gVisuals.close();
-        gView.close();
-        gData.close();
-        gAttractor.close();
+    // Auto Rotate
+    const rotInput = document.getElementById('auto-rotate');
+    if (rotInput) {
+        rotInput.onchange = (e) => params.autoRotate = e.target.checked;
     }
+
+    // --- Presets ---
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.onclick = () => applyPreset(btn.dataset.preset);
+    });
+
+    // --- Camera ---
+    document.querySelectorAll('.cam-btn').forEach(btn => {
+        btn.onclick = () => {
+            let view = btn.dataset.view;
+            if (view === 'Front') params.ViewFront();
+            if (view === 'Top') params.ViewTop();
+            if (view === 'Side') params.ViewSide();
+            if (view === 'Iso') params.ViewIso();
+        };
+    });
+
+    // --- Actions ---
+    bindBtn('btn-screenshot', params.Screenshot);
+    bindBtn('btn-save-preset', doSavePreset);
+    bindBtn('btn-load-preset', doLoadPreset);
+    bindBtn('btn-export-obj', doExportOBJ);
+    bindBtn('btn-export-stl', doExportSTL);
+    bindBtn('btn-seed', params.RandomizeSeed);
+
+    // Mobile Sidebar Toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggle-sidebar');
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+
+    if (toggleBtn) toggleBtn.onclick = () => {
+        if (sidebar) sidebar.classList.add('translate-x-full');
+    };
+
+    if (mobileBtn) mobileBtn.onclick = () => {
+        if (sidebar) sidebar.classList.remove('translate-x-full');
+    };
+
+    // Init Sidebar State (Desktop open, Mobile closed)
+    if (window.innerWidth < 768 && sidebar) {
+        sidebar.classList.add('translate-x-full');
+    }
+}
+
+// ------------------ Helpers ------------------
+function updateUISync() {
+    if (!document.getElementById('sidebar')) return;
+    // Sync all sliders
+    for (let key in params) {
+        if (typeof params[key] !== 'function') {
+            let el = document.getElementById('inp-' + key);
+            let disp = document.getElementById('val-' + key);
+            if (el) el.value = params[key];
+            if (disp) disp.innerText = params[key];
+        }
+    }
+    // Sync visual toggles if needed
+    let attToggle = document.getElementById('inp-ATTRACTOR_ON');
+    if (attToggle) attToggle.checked = params.ATTRACTOR_ON;
 }
 
 function applyPreset(name) {
     let p = presets[name];
     if (!p) return;
     Object.assign(params, p);
-    // Force update UI
-    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    updateUISync();
     triggerRebuild();
 }
 
@@ -318,7 +384,7 @@ function doLoadPreset() {
             try {
                 let data = JSON.parse(event.target.result);
                 Object.assign(params, data);
-                gui.controllersRecursive().forEach(c => c.updateDisplay());
+                updateUISync();
                 triggerRebuild();
                 console.log("Preset loaded successfully");
             } catch (err) {
