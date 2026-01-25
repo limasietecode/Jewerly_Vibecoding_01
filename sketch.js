@@ -103,6 +103,9 @@ function preload() {
 }
 
 function setup() {
+    // Mobile optimization: Force 1.0 pixel density for performance
+    pixelDensity(1);
+
     let c = createCanvas(windowWidth, windowHeight, WEBGL);
     c.parent('canvas-container');
     smooth();
@@ -265,6 +268,17 @@ function buildUI() {
     gData.add(params, 'Rebuild');
     gData.add(params, 'Export_OBJ');
     gData.add(params, 'Export_STL');
+
+    // Mobile optimization: Close folders if screen is narrow
+    if (window.innerWidth < 600) {
+        gPresets.close();
+        gShape.close();
+        gExtrude.close();
+        gVisuals.close();
+        gView.close();
+        gData.close();
+        gAttractor.close();
+    }
 }
 
 function applyPreset(name) {

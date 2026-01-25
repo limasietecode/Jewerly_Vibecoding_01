@@ -4,6 +4,7 @@ body {
   overflow: hidden;
   background-color: #f0f0f0;
   font-family: sans-serif;
+  touch-action: none; /* Prevent scrolling on mobile */
 }
 
 #canvas-container {
@@ -12,6 +13,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Ensure GUI doesn't take over full screen on mobile */
+.lil-gui.root {
+  max-width: 80vw;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 canvas {
