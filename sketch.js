@@ -340,6 +340,17 @@ function buildUI() {
     if (window.innerWidth < 768 && sidebar) {
         sidebar.classList.add('translate-x-full');
     }
+
+    // Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+        themeBtn.onclick = () => {
+            document.documentElement.classList.toggle('dark');
+            // Visual update if needed (canvas bg should update auto next draw frame if using CSS var, 
+            // but we use params.bgColor in sketch. Syncing that is tricky if user picked custom color.
+            // Let's force a default background for light/dark modes if they haven't manually picked one?)
+        };
+    }
 }
 
 // ------------------ Helpers ------------------
