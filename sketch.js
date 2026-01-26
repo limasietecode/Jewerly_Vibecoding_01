@@ -240,13 +240,31 @@ function buildUI() {
 
         // Init value
         el.value = params[paramKey];
+        updateSliderColor(el);
 
         el.oninput = (e) => {
             let val = parseFloat(e.target.value);
             params[paramKey] = val;
             if (valDisplay) valDisplay.innerText = val;
+            updateSliderColor(e.target);
             onChange();
         };
+    };
+
+    const updateSliderColor = (el) => {
+        let min = parseFloat(el.min);
+        let max = parseFloat(el.max);
+        let val = parseFloat(el.value);
+        let t = (val - min) / (max - min);
+
+        // Gold (#D4AF37) to Copper (#C87533)
+        // Gold: 212, 175, 55
+        // Copper: 200, 117, 51
+        let r = lerp(212, 200, t);
+        let g = lerp(175, 117, t);
+        let b = lerp(55, 51, t);
+
+        el.style.setProperty('--thumb-color', `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`);
     };
 
     // --- Helper to bind button ---
@@ -374,7 +392,10 @@ function updateUISync() {
         if (typeof params[key] !== 'function') {
             let el = document.getElementById('inp-' + key);
             let disp = document.getElementById('val-' + key);
-            if (el) el.value = params[key];
+            if (el) {
+                el.value = params[key];
+                updateSliderColor(el);
+            }
             if (disp) disp.innerText = params[key];
         }
     }
