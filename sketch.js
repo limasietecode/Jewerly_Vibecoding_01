@@ -136,6 +136,7 @@ function draw() {
 
     if (!built || needsRebuild) {
         buildMesh();
+        updateDimensionsDisplay();
         built = true;
         needsRebuild = false;
     }
@@ -267,6 +268,9 @@ function buildUI() {
     bindSlider('inp-RIBBON_W_MIN', 'RIBBON_W_MIN');
     bindSlider('inp-RIBBON_W_MAX', 'RIBBON_W_MAX');
     bindSlider('inp-EXTRUDE_Z', 'EXTRUDE_Z');
+
+    // --- Export Settings ---
+    bindSlider('inp-TARGET_DIAM_MM', 'TARGET_DIAM_MM');
 
     // --- Attractor ---
     const attToggle = document.getElementById('inp-ATTRACTOR_ON');
@@ -553,7 +557,7 @@ function triggerRebuild() {
     needsRebuild = true;
 }
 
-// ------------------ Export ------------------
+// ------------------ Export / Dimensions ------------------
 function currentOuterDiameterPx() {
     if (V.length === 0) return 0;
     let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
@@ -569,6 +573,36 @@ function currentOuterDiameterPx() {
 function getExportScale() {
     let dpx = currentOuterDiameterPx();
     return (dpx > 0) ? (params.TARGET_DIAM_MM / dpx) : 1.0;
+}
+
+function updateDimensionsDisplay() {
+    if (V.length === 0) return;
+
+    // Bounds in Px
+    let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity, minz = Infinity, maxz = -Infinity;
+    for (let p of V) {
+        if (p.x < minx) minx = p.x;
+        if (p.x > maxx) maxx = p.x;
+        if (p.y < miny) miny = p.y;
+        if (p.y > maxy) maxy = p.y;
+        if (p.z < minz) minz = p.z;
+        if (p.z > maxz) maxz = p.z;
+    }
+
+    let w = maxx - minx;
+    let h = maxy - miny;
+    let d = maxz - minz;
+
+    // Scale to mm
+    let scale = getExportScale();
+    let mmW = w * scale;
+    let mmH = h * scale;
+    let mmD = d * scale;
+
+    let el = document.getElementById('dim-display');
+    if (el) {
+        el.innerText = `${mmW.toFixed(1)} x ${mmH.toFixed(1)} x ${mmD.toFixed(1)} mm`;
+    }
 }
 
 function doExportOBJ() {
