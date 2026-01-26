@@ -255,6 +255,8 @@ function buildUI() {
     // --- Extrusion ---
     bindSlider('inp-LOBES', 'LOBES');
     bindSlider('inp-LOBE_AMP', 'LOBE_AMP');
+    bindSlider('inp-RIBBON_W_MIN', 'RIBBON_W_MIN');
+    bindSlider('inp-RIBBON_W_MAX', 'RIBBON_W_MAX');
     bindSlider('inp-EXTRUDE_Z', 'EXTRUDE_Z');
 
     // --- Attractor ---
