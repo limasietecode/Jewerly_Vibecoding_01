@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="UTF-8">
@@ -13,12 +13,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class', // Enable manual toggle
       theme: {
         extend: {
           colors: {
             brand: '#D4AF37', // Gold
             dark: '#1a1a1a',
             panel: 'rgba(30, 30, 30, 0.85)',
+            'panel-light': 'rgba(255, 255, 255, 0.85)',
           },
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
@@ -34,7 +36,7 @@
       font-family: 'Inter', sans-serif;
       overflow: hidden;
       touch-action: none;
-      background-color: #1a1a1a;
+      /* Background handled by utility classes now */
     }
 
     /* Custom Scrollbar */
@@ -47,11 +49,19 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #444;
+      background: #cbd5e1;
       border-radius: 3px;
     }
 
+    .dark ::-webkit-scrollbar-thumb {
+      background: #444;
+    }
+
     ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
 
@@ -76,32 +86,59 @@
       width: 100%;
       height: 4px;
       cursor: pointer;
-      background: #444;
+      background: #e2e8f0;
+      /* Light track */
       border-radius: 2px;
+    }
+
+    .dark input[type=range]::-webkit-slider-runnable-track {
+      background: #444;
+      /* Dark track */
     }
   </style>
 </head>
 
-<body class="text-white relative h-screen w-screen">
+<body
+  class="text-gray-900 dark:text-white bg-gray-100 dark:bg-dark relative h-screen w-screen transition-colors duration-300">
 
   <!-- Canvas Container -->
   <div id="canvas-container" class="absolute inset-0 z-0"></div>
 
   <!-- Header / Logo -->
-  <div class="absolute top-0 left-0 p-6 z-10 pointer-events-none">
-    <h1 class="text-2xl font-bold tracking-wider text-brand">VIBECODING</h1>
-    <p class="text-xs text-gray-400">JEWELRY EDITOR v6.0</p>
+  <div class="absolute top-0 left-0 p-6 z-10 pointer-events-none flex items-center space-x-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-wider text-brand">VIBECODING</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400">JEWELRY EDITOR v10.0</p>
+    </div>
   </div>
+
+  <!-- Theme Toggle (Top Right, fixed position) -->
+  <button id="theme-toggle"
+    class="absolute top-6 left-48 z-50 p-2 rounded-full bg-white/20 dark:bg-black/20 hover:bg-black/10 dark:hover:bg-white/10 transition backdrop-blur-sm pointer-events-auto cursor-pointer">
+    <!-- Sun Icon (Hidden in Dark) -->
+    <svg class="w-5 h-5 text-yellow-500 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+      </path>
+    </svg>
+    <!-- Moon Icon (Hidden in Light) -->
+    <svg class="w-5 h-5 text-gray-800 dark:text-gray-300 hidden dark:block" fill="none" stroke="currentColor"
+      viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+    </svg>
+  </button>
 
   <!-- Main Sidebar -->
   <div
-    class="absolute top-0 right-0 h-full w-80 bg-panel backdrop-blur-md border-l border-white/10 flex flex-col z-20 transition-transform duration-300 transform translate-x-0"
+    class="absolute top-0 right-0 h-full w-80 bg-panel-light dark:bg-panel backdrop-blur-md border-l border-black/5 dark:border-white/10 flex flex-col z-20 transition-transform duration-300 transform translate-x-0"
     id="sidebar">
 
     <!-- Controls Header -->
-    <div class="p-4 border-b border-white/10 flex justify-between items-center">
-      <h2 class="font-semibold text-sm uppercase tracking-wide">Controls</h2>
-      <button id="toggle-sidebar" class="md:hidden text-white hover:text-brand">✕</button>
+    <div class="p-4 border-b border-black/5 dark:border-white/10 flex justify-between items-center">
+      <h2 class="font-semibold text-sm uppercase tracking-wide text-gray-700 dark:text-gray-200">Controls</h2>
+      <button id="toggle-sidebar"
+        class="md:hidden text-gray-900 dark:text-white hover:text-brand cursor-pointer">✕</button>
     </div>
 
     <!-- Scrollable Content -->
@@ -109,132 +146,134 @@
 
       <!-- Presets Section -->
       <div class="space-y-3">
-        <label class="text-xs font-semibold text-gray-400 uppercase">Presets</label>
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Presets</label>
         <div class="grid grid-cols-3 gap-2">
           <button
-            class="preset-btn bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-white/10 rounded px-2 py-2 text-xs transition"
+            class="preset-btn bg-black/5 dark:bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-black/10 dark:border-white/10 rounded px-2 py-2 text-xs transition"
             data-preset="Minimalist">Minimalist</button>
           <button
-            class="preset-btn bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-white/10 rounded px-2 py-2 text-xs transition"
+            class="preset-btn bg-black/5 dark:bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-black/10 dark:border-white/10 rounded px-2 py-2 text-xs transition"
             data-preset="Organic">Organic</button>
           <button
-            class="preset-btn bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-white/10 rounded px-2 py-2 text-xs transition"
+            class="preset-btn bg-black/5 dark:bg-white/5 hover:bg-brand/20 active:bg-brand/40 border border-black/10 dark:border-white/10 rounded px-2 py-2 text-xs transition"
             data-preset="Futuristic">Futuristic</button>
         </div>
       </div>
 
       <!-- Appearance Section -->
       <div class="space-y-3">
-        <label class="text-xs font-semibold text-gray-400 uppercase">Appearance</label>
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Appearance</label>
         <div class="flex space-x-2">
           <button
-            class="material-btn flex-1 py-1 text-xs border border-white/10 rounded bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500"
+            class="material-btn flex-1 py-1 text-xs border border-black/10 dark:border-white/10 rounded bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-600 dark:text-yellow-500"
             data-mat="Gold">Gold</button>
           <button
-            class="material-btn flex-1 py-1 text-xs border border-white/10 rounded bg-gray-400/20 hover:bg-gray-400/40 text-gray-300"
+            class="material-btn flex-1 py-1 text-xs border border-black/10 dark:border-white/10 rounded bg-gray-400/20 hover:bg-gray-400/40 text-gray-600 dark:text-gray-300"
             data-mat="Silver">Silver</button>
           <button
-            class="material-btn flex-1 py-1 text-xs border border-white/10 rounded bg-orange-700/20 hover:bg-orange-700/40 text-orange-400"
+            class="material-btn flex-1 py-1 text-xs border border-black/10 dark:border-white/10 rounded bg-orange-700/20 hover:bg-orange-700/40 text-orange-600 dark:text-orange-400"
             data-mat="Copper">Copper</button>
-          <button class="material-btn flex-1 py-1 text-xs border border-white/10 rounded bg-white/5 hover:bg-white/10"
+          <button
+            class="material-btn flex-1 py-1 text-xs border border-black/10 dark:border-white/10 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
             data-mat="Flat">Flat</button>
         </div>
         <div class="flex items-center justify-between text-xs">
-          <span>Background</span>
+          <span class="text-gray-600 dark:text-gray-300">Background</span>
           <input type="color" id="bg-color" value="#1a1a1a"
             class="bg-transparent border-none w-6 h-6 p-0 cursor-pointer">
         </div>
         <div class="flex items-center space-x-2">
           <input type="checkbox" id="auto-rotate" checked class="accent-brand">
-          <label for="auto-rotate" class="text-xs text-gray-300">Auto Rotate</label>
+          <label for="auto-rotate" class="text-xs text-gray-600 dark:text-gray-300">Auto Rotate</label>
         </div>
       </div>
 
       <!-- Shape Section -->
       <div class="space-y-4">
-        <label class="text-xs font-semibold text-gray-400 uppercase">Shape Definition</label>
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Shape Definition</label>
 
         <!-- Slider Group Helper -->
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Layers</span><span id="val-LAYERS">9</span>
-          </div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Layers</span><span
+              id="val-LAYERS">9</span></div>
           <input type="range" id="inp-LAYERS" min="1" max="30" step="1" value="9">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Min Radius</span><span id="val-MIN_R">18</span>
-          </div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Min Radius</span><span
+              id="val-MIN_R">18</span></div>
           <input type="range" id="inp-MIN_R" min="4" max="150" step="1" value="18">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Max Radius</span><span id="val-MAX_R">170</span>
-          </div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Max Radius</span><span
+              id="val-MAX_R">170</span></div>
           <input type="range" id="inp-MAX_R" min="10" max="300" step="1" value="170">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Noise Freq</span><span
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Noise Freq</span><span
               id="val-NOISE_FREQ">0.9</span></div>
           <input type="range" id="inp-NOISE_FREQ" min="0" max="3" step="0.1" value="0.9">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Wobble</span><span id="val-WOBBLE_PX">15</span>
-          </div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Wobble</span><span
+              id="val-WOBBLE_PX">15</span></div>
           <input type="range" id="inp-WOBBLE_PX" min="0" max="80" step="1" value="15">
         </div>
       </div>
 
       <!-- Extrusion Section -->
       <div class="space-y-4">
-        <label class="text-xs font-semibold text-gray-400 uppercase">Extrusion</label>
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Extrusion</label>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Lobes</span><span id="val-LOBES">6</span></div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Lobes</span><span
+              id="val-LOBES">6</span></div>
           <input type="range" id="inp-LOBES" min="0" max="24" step="1" value="6">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Lobe Amp</span><span id="val-LOBE_AMP">12</span>
-          </div>
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Lobe Amp</span><span
+              id="val-LOBE_AMP">12</span></div>
           <input type="range" id="inp-LOBE_AMP" min="0" max="80" step="1" value="12">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Ribbon W (Min)</span><span
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Ribbon W (Min)</span><span
               id="val-RIBBON_W_MIN">8</span></div>
           <input type="range" id="inp-RIBBON_W_MIN" min="0.5" max="15" step="0.5" value="8">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Ribbon W (Max)</span><span
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Ribbon W (Max)</span><span
               id="val-RIBBON_W_MAX">5</span></div>
           <input type="range" id="inp-RIBBON_W_MAX" min="0.5" max="15" step="0.5" value="5">
         </div>
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-400"><span>Z Thickness</span><span
+          <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Z Thickness</span><span
               id="val-EXTRUDE_Z">10</span></div>
           <input type="range" id="inp-EXTRUDE_Z" min="0.5" max="25" step="0.5" value="10">
         </div>
       </div>
 
       <!-- Attractor Section -->
-      <div class="space-y-3 bg-white/5 p-3 rounded border border-white/5">
+      <div class="space-y-3 bg-black/5 dark:bg-white/5 p-3 rounded border border-black/5 dark:border-white/5">
         <div class="flex items-center justify-between">
-          <label class="text-xs font-semibold text-gray-400 uppercase">Attractor</label>
+          <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Attractor</label>
           <input type="checkbox" id="inp-ATTRACTOR_ON" class="accent-brand">
         </div>
         <div id="attractor-controls" class="space-y-3 opacity-50 pointer-events-none transition-opacity">
           <div class="space-y-1">
-            <div class="flex justify-between text-xs text-gray-500"><span>Pos X</span><span
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Pos X</span><span
                 id="val-ATTRACTOR_X">100</span></div>
             <input type="range" id="inp-ATTRACTOR_X" min="-300" max="300" step="10" value="100">
           </div>
           <div class="space-y-1">
-            <div class="flex justify-between text-xs text-gray-500"><span>Pos Y</span><span
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Pos Y</span><span
                 id="val-ATTRACTOR_Y">0</span></div>
             <input type="range" id="inp-ATTRACTOR_Y" min="-300" max="300" step="10" value="0">
           </div>
           <div class="space-y-1">
-            <div class="flex justify-between text-xs text-gray-500"><span>Range</span><span
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Range</span><span
                 id="val-ATTRACTOR_RADIUS">100</span></div>
             <input type="range" id="inp-ATTRACTOR_RADIUS" min="10" max="300" step="10" value="100">
           </div>
           <div class="space-y-1">
-            <div class="flex justify-between text-xs text-gray-500"><span>Strength</span><span
+            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400"><span>Strength</span><span
                 id="val-ATTRACTOR_STRENGTH">50</span></div>
             <input type="range" id="inp-ATTRACTOR_STRENGTH" min="-100" max="100" step="5" value="50">
           </div>
@@ -242,29 +281,33 @@
       </div>
 
       <!-- Camera / Data -->
-      <div class="space-y-3 pt-4 border-t border-white/10">
-        <label class="text-xs font-semibold text-gray-400 uppercase">Camera & Actions</label>
+      <div class="space-y-3 pt-4 border-t border-black/5 dark:border-white/10">
+        <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Camera & Actions</label>
         <div class="grid grid-cols-4 gap-1">
-          <button class="cam-btn bg-white/5 hover:bg-white/10 rounded px-1 py-1 text-[10px]"
+          <button
+            class="cam-btn bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded px-1 py-1 text-[10px]"
             data-view="Front">Front</button>
-          <button class="cam-btn bg-white/5 hover:bg-white/10 rounded px-1 py-1 text-[10px]"
+          <button
+            class="cam-btn bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded px-1 py-1 text-[10px]"
             data-view="Top">Top</button>
-          <button class="cam-btn bg-white/5 hover:bg-white/10 rounded px-1 py-1 text-[10px]"
+          <button
+            class="cam-btn bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded px-1 py-1 text-[10px]"
             data-view="Side">Side</button>
-          <button class="cam-btn bg-white/5 hover:bg-white/10 rounded px-1 py-1 text-[10px]"
+          <button
+            class="cam-btn bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded px-1 py-1 text-[10px]"
             data-view="Iso">Iso</button>
         </div>
         <button id="btn-screenshot"
-          class="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded py-2 text-xs flex justify-center items-center">
+          class="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded py-2 text-xs flex justify-center items-center">
           📸 Screenshot
         </button>
 
         <div class="flex space-x-2">
           <button id="btn-save-preset"
-            class="flex-1 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded py-2 text-xs text-blue-300">Save
+            class="flex-1 bg-blue-600/10 dark:bg-blue-600/20 hover:bg-blue-600/20 dark:hover:bg-blue-600/40 border border-blue-500/30 rounded py-2 text-xs text-blue-600 dark:text-blue-300">Save
             JSON</button>
           <button id="btn-load-preset"
-            class="flex-1 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded py-2 text-xs text-blue-300">Load
+            class="flex-1 bg-blue-600/10 dark:bg-blue-600/20 hover:bg-blue-600/20 dark:hover:bg-blue-600/40 border border-blue-500/30 rounded py-2 text-xs text-blue-600 dark:text-blue-300">Load
             JSON</button>
         </div>
 
@@ -273,11 +316,12 @@
             class="flex-1 bg-brand text-black font-semibold rounded py-2 text-xs hover:bg-yellow-400">Export
             OBJ</button>
           <button id="btn-export-stl"
-            class="flex-1 bg-white/10 text-white font-semibold rounded py-2 text-xs hover:bg-white/20">Export
+            class="flex-1 bg-black/10 dark:bg-white/10 text-gray-900 dark:text-white font-semibold rounded py-2 text-xs hover:bg-black/20 dark:hover:bg-white/20">Export
             STL</button>
         </div>
         <div class="text-center">
-          <button id="btn-seed" class="text-[10px] text-gray-500 hover:text-gray-300">Randomize Seed</button>
+          <button id="btn-seed" class="text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Randomize
+            Seed</button>
         </div>
       </div>
 
@@ -294,6 +338,5 @@
 
   <script src="sketch.js?v=10"></script>
 </body>
-
 
 </html>
