@@ -82,6 +82,15 @@ const presets = {
     },
     'Futuristic': {
         LAYERS: 6, MIN_R: 40, MAX_R: 160, NOISE_FREQ: 0, WOBBLE_PX: 0, LOBES: 3, LOBE_AMP: 40, RIBBON_W_MIN: 2, RIBBON_W_MAX: 2, EXTRUDE_Z: 20
+    },
+    'Vortex': {
+        LAYERS: 24, MIN_R: 20, MAX_R: 200, NOISE_FREQ: 2.5, WOBBLE_PX: 30, LOBES: 0, LOBE_AMP: 0, STEP_A: 0.02, RIBBON_W_MIN: 3, RIBBON_W_MAX: 1
+    },
+    'Spiked': {
+        LAYERS: 5, MIN_R: 50, MAX_R: 140, NOISE_FREQ: 0.2, WOBBLE_PX: 5, LOBES: 12, LOBE_AMP: 50, RIBBON_W_MIN: 4, RIBBON_W_MAX: 4, EXTUDE_Z: 15
+    },
+    'Alien': {
+        LAYERS: 12, MIN_R: 30, MAX_R: 170, NOISE_FREQ: 0.4, WOBBLE_PX: 60, LOBES: 4, LOBE_AMP: 10, RIBBON_W_MIN: 6, RIBBON_W_MAX: 2
     }
 };
 
