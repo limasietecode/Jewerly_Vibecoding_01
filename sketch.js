@@ -6,13 +6,13 @@
 // ------------------ Parameters ------------------
 const params = {
     // Shape properies
-    LAYERS: 9,
-    MIN_R: 18,
-    MAX_R: 170,
-    NOISE_FREQ: 0.9,
-    WOBBLE_PX: 15,
-    LOBES: 6,
-    LOBE_AMP: 12,
+    LAYERS: 26,
+    MIN_R: 90,
+    MAX_R: 156,
+    NOISE_FREQ: 0,
+    WOBBLE_PX: 0,
+    LOBES: 5,
+    LOBE_AMP: 48,
     STEP_A: 0.028,
 
     // Attractor
@@ -23,16 +23,16 @@ const params = {
     ATTRACTOR_STRENGTH: 50,
 
     // Extrusion properties
-    RIBBON_W_MIN: 8,
-    RIBBON_W_MAX: 5,
-    EXTRUDE_Z: 10,
+    RIBBON_W_MIN: 1,
+    RIBBON_W_MAX: 3.5,
+    EXTRUDE_Z: 4,
 
     // Misc
-    SEED: 1337,
-    TARGET_DIAM_MM: 45,
-    autoRotate: true,
+    SEED: 79736,
+    TARGET_DIAM_MM: 59,
+    autoRotate: false,
     autoRebuild: true,
-    turntable: 0,
+    turntable: 7.004999999999873,
     displayWireframe: false,
 
     // Visuals
@@ -355,15 +355,14 @@ function buildUI() {
 
     // Mobile Sidebar Toggle
     const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('toggle-sidebar');
     const mobileBtn = document.getElementById('mobile-menu-btn');
 
-    if (toggleBtn) toggleBtn.onclick = () => {
-        if (sidebar) sidebar.classList.add('translate-x-full');
-    };
-
     if (mobileBtn) mobileBtn.onclick = () => {
-        if (sidebar) sidebar.classList.remove('translate-x-full');
+        if (sidebar) {
+            sidebar.classList.toggle('translate-x-full');
+            // Toggle button icon between ☰ and ✕
+            mobileBtn.textContent = sidebar.classList.contains('translate-x-full') ? '☰' : '✕';
+        }
     };
 
     // Init Sidebar State (Desktop open, Mobile closed)
