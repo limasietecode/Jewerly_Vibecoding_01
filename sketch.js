@@ -227,8 +227,23 @@ function setCameraView(x, y, z) {
     camera(x, y, z, 0, 0, 0, 0, 1, 0);
 }
 
-// ------------------ Build UI ------------------
 // ------------------ Build UI (Tailwind Integration) ------------------
+
+// Global helper for slider color gradient (Gold -> Copper)
+function updateSliderColor(el) {
+    let min = parseFloat(el.min);
+    let max = parseFloat(el.max);
+    let val = parseFloat(el.value);
+    let t = (max - min) !== 0 ? (val - min) / (max - min) : 0;
+
+    // Gold: 212, 175, 55 | Copper: 200, 117, 51
+    let r = lerp(212, 200, t);
+    let g = lerp(175, 117, t);
+    let b = lerp(55, 51, t);
+
+    el.style.setProperty('--thumb-color', `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`);
+}
+
 function buildUI() {
     // We no longer use lil-gui. We bind HTML elements to params.
 
@@ -247,24 +262,7 @@ function buildUI() {
             params[paramKey] = val;
             if (valDisplay) valDisplay.innerText = val;
             updateSliderColor(e.target);
-            onChange();
         };
-    };
-
-    const updateSliderColor = (el) => {
-        let min = parseFloat(el.min);
-        let max = parseFloat(el.max);
-        let val = parseFloat(el.value);
-        let t = (val - min) / (max - min);
-
-        // Gold (#D4AF37) to Copper (#C87533)
-        // Gold: 212, 175, 55
-        // Copper: 200, 117, 51
-        let r = lerp(212, 200, t);
-        let g = lerp(175, 117, t);
-        let b = lerp(55, 51, t);
-
-        el.style.setProperty('--thumb-color', `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`);
     };
 
     // --- Helper to bind button ---
