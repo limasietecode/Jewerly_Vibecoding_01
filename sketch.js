@@ -262,6 +262,7 @@ function buildUI() {
             params[paramKey] = val;
             if (valDisplay) valDisplay.innerText = val;
             updateSliderColor(e.target);
+            onChange();
         };
     };
 
